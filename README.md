@@ -1,3 +1,90 @@
+## Tray – Erweiterungen dieses Forks
+
+Basis: [dragonwocky/obsidian-tray](https://github.com/dragonwocky/obsidian-tray),
+Commit `ac353bb5a6e59fea9339befcf1c89fe0d4d97920` (Tray 0.3.5).
+Fork: [FoegiUpdate/obsidian-tray](https://github.com/FoegiUpdate/obsidian-tray). Repository und Plugin heißen weiterhin `obsidian-tray` bzw. `Tray`.
+Plugin-ID und Manifest-Version bleiben für die Kompatibilität zu vorhandenen Tray-Einstellungen unverändert.
+Der Fork ist am Kommentar im Kopf von `main.js` und an dieser README erkennbar.
+
+### Bedienung unter Windows
+
+- Einfacher Linksklick zeigt die Vault-Fenster. Ein bereits sichtbares Fenster wird dabei nicht versteckt.
+- Doppellinksklick führt den Obsidian-Befehl `sticky-notes:create-sticky-note` aus.
+  Dabei wird die ausstehende Einzelklick-Aktion verworfen; die Hauptfenster werden nicht zusätzlich eingeblendet.
+- Rechtsklick öffnet das bisherige Menü, ergänzt um **New Sticky Note**.
+- Der vorhandene Quick-Note-Befehl, globale Hotkeys und die übrigen Menüaktionen bleiben erhalten.
+- Unter Tray-Einstellungen kann **Sticky note command** auf eine andere vollständige Command-ID gesetzt werden.
+  Ein leerer Wert verwendet wieder den Standardbefehl. Es wird kein Plugin automatisch installiert.
+
+Der Einzelklick wartet auf die Windows-Doppelklickzeit plus 50 ms (bei 500 ms Einstellung also 550 ms).
+Die Registry-Einstellung `HKCU\Control Panel\Mouse\DoubleClickSpeed` wird beim Erstellen des Symbols
+mit einer verborgenen, zeitlich begrenzten `reg.exe`-Abfrage nur gelesen.
+Nach Änderungen der Maus-Doppelklickzeit Tray deaktivieren und wieder aktivieren.
+Kann die Einstellung nicht gelesen werden, wartet der Einzelklick vorsichtshalber 5,05 Sekunden
+und es erscheint eine Warnung in der Entwicklerkonsole. Es werden keine Maus-/Registry-Einstellungen verändert.
+Die Registry ist die gespeicherte Einstellung; temporäre Änderungen durch andere Programme über
+`SetDoubleClickTime` werden darüber nicht erfasst.
+
+### Voraussetzungen und Grenzen
+
+- Windows Desktop mit Obsidian und aktiviertem Sticky Notes von Abdo-reda/NoPoint.
+  Der Befehl wurde im lokal vorhandenen Sticky Notes 1.0.0 geprüft.
+- Zuerst in Obsidian per Befehlspalette **Sticky Notes: Create sticky note** testen.
+  Zielordner und Notizverhalten werden vollständig vom Sticky-Notes-Plugin bestimmt.
+- `app.commands.executeCommandById` ist eine interne Obsidian-Schnittstelle und fehlt in der öffentlichen
+  TypeScript-API. Der Zugriff ist im Fork an einer Stelle gekapselt und prüft Verfügbarkeit/Rückgabewert.
+  Ein fehlender oder deaktivierter Befehl erzeugt einen Hinweis, keinen Ersatz durch eine normale Quick Note.
+  Wenn das Zielplugin eigene Fehler intern verschluckt, kann Tray den tatsächlichen Notizerfolg nicht prüfen.
+- Die vorhandene Electron-Remote-Anbindung des Originals bleibt bestehen. Kompatibilität zu künftigen
+  Obsidian-/Electron-Versionen ist damit nicht garantiert.
+- macOS behält beim Linksklick die ursprüngliche Menüaktion; Linux zeigt beim Aktivierungsereignis die Fenster.
+  Die neue Doppelklickaktion ist auf Windows begrenzt.
+
+### Installation zuerst in einem separaten Test-Vault
+
+1. Einen separaten Test-Vault verwenden und dort Sticky Notes installieren/aktivieren.
+2. Falls Tray dort bereits installiert ist: Tray deaktivieren und dessen kompletten Pluginordner sichern,
+   insbesondere `data.json`. Nicht Original und Fork parallel aktivieren: beide haben die ID `tray`.
+3. Das Installations-ZIP entpacken. Den enthaltenen Ordner `tray` nach
+   `<Test-Vault>/.obsidian/plugins/tray` kopieren. Enthalten sind `main.js`, `manifest.json`, Bilder,
+   Lizenz und diese README. Vorhandene `data.json` nicht löschen oder überschreiben.
+4. Obsidian neu laden und Tray aktivieren. **Create tray icon** muss eingeschaltet sein.
+5. Einzelklick bei verstecktem und sichtbarem Vault prüfen; Doppelklick muss genau eine Sticky Note erzeugen,
+   ohne die Einzelklick-Aktion auszulösen. Auch nahe der eingestellten Doppelklickzeit testen.
+6. Rechtsklick: **New Sticky Note** und die bisherigen Menüaktionen prüfen.
+   Sticky Notes vorübergehend deaktivieren: Die neue Aktion muss dann einen Hinweis zeigen.
+7. Rückweg: Tray deaktivieren, gesicherten Originalordner wiederherstellen, Obsidian neu laden.
+
+Eine spätere Übernahme in den produktiven Vault ist ein eigener Installationsschritt.
+Die Installation erfolgt ausschließlich manuell; die Entwicklungskopie verändert keine bestehenden Vaults.
+
+### Entwicklung und Prüfung
+
+Kein Build und keine Paketinstallation erforderlich: `main.js` ist direkt ladbares CommonJS-JavaScript.
+Automatisierte Prüfungen (Node.js 24.19.0 verwendet):
+
+```sh
+node --check main.js
+node --test tests/tray.test.cjs
+git diff --check
+```
+
+Neun Tests prüfen die Klick-/Doppelklickfolgen mit simulierten Timern, Menüerhalt und Command-Aufruf,
+Fehlerfälle, langsame Doppelklicks, Cleanup und die Plattformabgrenzung.
+Electron, Obsidian und die Command-Ausführung werden dabei simuliert. Ein echter GUI-/Integrationstest
+mit diesem Fork in Obsidian wurde noch nicht durchgeführt; eine erfolgreich erzeugte Sticky Note ist
+deshalb noch nicht nachgewiesen. Tests sind Entwicklungsdateien und werden nicht zur Installation benötigt.
+
+Quellen zur Anbindung:
+
+- [Öffentliche Obsidian-API und addCommand-Präfix](https://github.com/obsidianmd/obsidian-api/blob/master/obsidian.d.ts)
+- [Sticky-Notes-Originalprojekt](https://github.com/Abdo-reda/obsidian-sticky-notes-plugin)
+- [Electron Tray-Ereignisse](https://www.electronjs.org/docs/latest/api/tray)
+- [Electron Windows: einzelne und doppelte Maustastendrücke](https://github.com/electron/electron/blob/v37.0.0/shell/browser/ui/win/notify_icon_host.cc)
+- [Windows-Doppelklickzeit und Obergrenze](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setdoubleclicktime)
+
+---
+
 <img alt="" src="tray.png" align="right"  height="128px">
 
 **Tray** is an [Obsidian](https://obsidian.md/) plugin that can be used to launch the app

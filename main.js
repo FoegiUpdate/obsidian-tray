@@ -2,6 +2,7 @@
  * obsidian-tray v0.3.5
  * (c) 2023 dragonwocky <thedragonring.bod@gmail.com> (https://dragonwocky.me/)
  * (https://github.com/dragonwocky/obsidian-tray/) under the MIT license
+ * Fork: Windows tray click actions and Sticky Notes command dispatch.
  */
 
 "use strict";
@@ -16,6 +17,8 @@ const LOG_PREFIX = "obsidian-tray",
   LOG_REGISTER_HOTKEY = "registering hotkey",
   LOG_UNREGISTER_HOTKEY = "unregistering hotkey",
   ACTION_QUICK_NOTE = "Quick Note",
+  ACTION_STICKY_NOTE = "New Sticky Note",
+  DEFAULT_STICKY_NOTE_COMMAND = "sticky-notes:create-sticky-note",
   ACTION_SHOW = "Show Vault",
   ACTION_HIDE = "Hide Vault",
   ACTION_RELAUNCH = "Relaunch Obsidian",
@@ -36,7 +39,7 @@ const LOG_PREFIX = "obsidian-tray",
   OBSIDIAN_BASE64_ICON = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAHZSURBVDhPlZKxTxRBFMa/XZcF7nIG7mjxjoRCwomJxgsFdhaASqzQxFDzB1AQKgstLGxIiBQGJBpiCCGx8h+wgYaGgAWNd0dyHofeEYVwt/PmOTMZV9aDIL/s5pvZvPfN9yaL/+HR3eXcypta0m4juFbP5GHuXc9IbunDFc9db/G81/ZzhDMN7g8td47mll4R5BfHwZN4LOaA+fHa259PbUmIYzWkt3e2NZNo3/V9v1vvU6kkstk+tLW3ItUVr/m+c3N8MlkwxYqmBFcbwUQQCNOcyVzDwEAWjuPi5DhAMV/tKOYPX5hCyz8Gz1zX5SmWjBvZfmTSaRBJkGAIoxJHv+pVW2yIGNxOJ8bUVNcFEWLxuG1ia6JercTbttwQTeDwPS0kCMXiXtgk/jQrFUw7ptYSMWApF40yo/ytjHq98fdk3ayVE+cn2CxMb6ruz9qAJKFUKoWza1VJSi/n0+ffgYHdWW2gHuxXymg0gjCB0sjpmiaDnkL3RzDyzLqBUKns2ztQqUR0fk2TwSrGSf1eczqF5vsPZRCQSSAFLk6gqctgQRkc6TWRQLV2YMYQki9OoNkqzFQ9r+WOGuW5CrJbOzyAlPKr6MSGLbkcDwbf35oY/jRkt6cAfgNwowruAMz9AgAAAABJRU5ErkJggg==`,
   log = (message) => console.log(`${LOG_PREFIX}: ${message}`);
 
-let tray, plugin;
+let tray, plugin, singleClickTimer;
 const obsidian = require("obsidian"),
   { app, Tray, Menu } = require("electron").remote,
   { nativeImage, BrowserWindow } = require("electron").remote,
@@ -158,7 +161,49 @@ const cleanup = () => {
     } else vaultWindows.forEach((win) => win.destroy());
   };
 
-const addQuickNote = () => {
+// Electron has no API for the Windows double-click interval. Read the user's
+// setting once per icon creation; no shell interpolation or native dependency.
+const getSingleClickDelay = () => {
+  try {
+    const output = require("child_process").execFileSync(
+      "reg.exe",
+      ["query", "HKCU\\Control Panel\\Mouse", "/v", "DoubleClickSpeed"],
+      { encoding: "utf8", windowsHide: true, timeout: 2000 }
+    );
+    const match = output.match(/DoubleClickSpeed\s+REG_SZ\s+(\d+)/i);
+    const interval = Number(match?.[1]);
+    if (interval > 0 && interval <= 5000) return interval + 50;
+    throw new Error("Invalid Windows DoubleClickSpeed setting");
+  } catch (error) {
+    console.warn(`${LOG_PREFIX}: cannot read double-click interval`, error);
+    // Conservative fallback: Windows permits intervals up to five seconds.
+    return 5050;
+  }
+};
+
+const cancelSingleClick = () => {
+    clearTimeout(singleClickTimer);
+    singleClickTimer = undefined;
+  },
+  addStickyNote = async () => {
+    cancelSingleClick();
+    const commandId = plugin.settings.stickyNoteCommand?.trim() ||
+      DEFAULT_STICKY_NOTE_COMMAND;
+    try {
+      // app.commands is an internal Obsidian API. Keep its use isolated here.
+      const commands = plugin.app.commands;
+      if (typeof commands?.executeCommandById !== "function") {
+        throw new Error("Obsidian command execution API is unavailable");
+      }
+      if (!await commands.executeCommandById(commandId)) {
+        new obsidian.Notice(`Tray: command unavailable: ${commandId}. Enable Sticky Notes and check the command ID.`);
+      }
+    } catch (error) {
+      console.error(`${LOG_PREFIX}: sticky note command failed`, error);
+      new obsidian.Notice("Tray: could not run the Sticky Notes command. See the developer console for details.");
+    }
+  },
+  addQuickNote = () => {
     const { quickNoteLocation, quickNoteDateFormat } = plugin.settings,
       pattern = quickNoteDateFormat || DEFAULT_DATE_FORMAT,
       date = obsidian.moment().format(pattern),
@@ -182,6 +227,7 @@ const addQuickNote = () => {
     return str.replace(/{{vault}}/g, plugin.app.vault.getName());
   },
   destroyTray = () => {
+    cancelSingleClick();
     tray?.destroy();
     tray = undefined;
   },
@@ -193,6 +239,11 @@ const addQuickNote = () => {
         plugin.settings.trayIconImage ?? OBSIDIAN_BASE64_ICON
       ),
       contextMenu = Menu.buildFromTemplate([
+        {
+          type: "normal",
+          label: ACTION_STICKY_NOTE,
+          click: addStickyNote,
+        },
         {
           type: "normal",
           label: ACTION_QUICK_NOTE,
@@ -216,15 +267,28 @@ const addQuickNote = () => {
         { label: ACTION_CLOSE, click: closeVault },
       ]);
     tray = new Tray(obsidianIcon);
+    // With setContextMenu(), Windows opens the menu without emitting right-click.
+    contextMenu.on("menu-will-show", cancelSingleClick);
     tray.setContextMenu(contextMenu);
     tray.setToolTip(replaceVaultName(plugin.settings.trayIconTooltip));
+    const singleClickDelay = process.platform === "win32" ? getSingleClickDelay() : 0;
     tray.on("click", () => {
       if (process.platform === "darwin") {
         // macos does not register separate left/right click actions
         // for menu items, icon should open menu w/out causing toggle
         tray.popUpContextMenu();
-      } else toggleWindows(false);
+      } else if (process.platform === "win32") {
+        cancelSingleClick();
+        singleClickTimer = setTimeout(() => {
+          singleClickTimer = undefined;
+          showWindows();
+        }, singleClickDelay);
+      } else showWindows();
     });
+    if (process.platform === "win32") {
+      tray.on("double-click", addStickyNote);
+      tray.on("right-click", cancelSingleClick);
+    }
   };
 
 const registerHotkeys = () => {
@@ -335,6 +399,12 @@ const OPTIONS = [
     onChange: registerHotkeys,
   },
   "Quick notes",
+  {
+    key: "stickyNoteCommand",
+    desc: "Obsidian command ID used by New Sticky Note and Windows tray double-click. Requires the corresponding plugin to be enabled.",
+    type: "text",
+    default: DEFAULT_STICKY_NOTE_COMMAND,
+  },
   {
     key: "quickNoteLocation",
     desc: "New quick notes will be placed in this folder.",
