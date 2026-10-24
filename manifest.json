@@ -1,10 +1,10 @@
 {
-  "id": "tray",
-  "name": "Tray",
-  "author": "dragonwocky",
-  "authorUrl": "https://dragonwocky.me/",
-  "description": "Run Obsidian from the system tray for customisable window management & global quick notes",
-  "version": "0.3.5",
+  "id": "tray-extended",
+  "name": "Tray Extended",
+  "author": "FoegiUpdate (fork of dragonwocky)",
+  "authorUrl": "https://github.com/FoegiUpdate/obsidian-tray",
+  "description": "Obsidian tray with separate single/double-click actions and Sticky Notes integration. Based on dragonwocky's Tray.",
+  "version": "0.3.6",
   "isDesktopOnly": true,
   "minAppVersion": "1.0.0"
 }

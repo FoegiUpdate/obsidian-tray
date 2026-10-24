@@ -1,9 +1,11 @@
-## Tray – Erweiterungen dieses Forks
+## Tray Extended
 
 Basis: [dragonwocky/obsidian-tray](https://github.com/dragonwocky/obsidian-tray),
 Commit `ac353bb5a6e59fea9339befcf1c89fe0d4d97920` (Tray 0.3.5).
-Fork: [FoegiUpdate/obsidian-tray](https://github.com/FoegiUpdate/obsidian-tray). Repository und Plugin heißen weiterhin `obsidian-tray` bzw. `Tray`.
-Plugin-ID und Manifest-Version bleiben für die Kompatibilität zu vorhandenen Tray-Einstellungen unverändert.
+Fork: [FoegiUpdate/obsidian-tray](https://github.com/FoegiUpdate/obsidian-tray). Das Repository heißt weiterhin `obsidian-tray`.
+Pluginname: **Tray Extended**, Plugin-ID und Installationsordner: `tray-extended`, Version: **0.3.6**.
+Damit bleiben Original und Fork getrennt installiert. Immer nur eines der beiden Tray-Plugins aktivieren,
+da sie dieselben globalen Hotkeys und Fensterfunktionen verwenden.
 Der Fork ist am Kommentar im Kopf von `main.js` und an dieser README erkennbar.
 
 ### Bedienung unter Windows
@@ -43,17 +45,25 @@ Die Registry ist die gespeicherte Einstellung; temporäre Änderungen durch ande
 ### Installation zuerst in einem separaten Test-Vault
 
 1. Einen separaten Test-Vault verwenden und dort Sticky Notes installieren/aktivieren.
-2. Falls Tray dort bereits installiert ist: Tray deaktivieren und dessen kompletten Pluginordner sichern,
-   insbesondere `data.json`. Nicht Original und Fork parallel aktivieren: beide haben die ID `tray`.
-3. Das Installations-ZIP entpacken. Den enthaltenen Ordner `tray` nach
-   `<Test-Vault>/.obsidian/plugins/tray` kopieren. Enthalten sind `main.js`, `manifest.json`, Bilder,
-   Lizenz und diese README. Vorhandene `data.json` nicht löschen oder überschreiben.
-4. Obsidian neu laden und Tray aktivieren. **Create tray icon** muss eingeschaltet sein.
+2. Falls Tray dort bereits installiert ist: Tray deaktivieren. Dessen Ordner `tray` samt `data.json`
+   bleibt für den Rückweg unverändert erhalten.
+3. Das Installations-ZIP entpacken. Den enthaltenen Ordner `tray-extended` nach
+   `<Test-Vault>/.obsidian/plugins/tray-extended` kopieren. Enthalten sind `main.js`, `manifest.json`, Bilder,
+   Lizenz und diese README. Alternativ genügen `main.js` und `manifest.json` aus diesem Repository.
+   Um Einstellungen zu übernehmen, bei deaktivierten Plugins einmalig `tray/data.json` nach
+   `tray-extended/data.json` kopieren. Bereits vorhandene Fork-Einstellungen vorher sichern und nicht ungeprüft überschreiben.
+4. Obsidian neu laden und **Tray Extended** aktivieren. **Create tray icon** muss eingeschaltet sein.
 5. Einzelklick bei verstecktem und sichtbarem Vault prüfen; Doppelklick muss genau eine Sticky Note erzeugen,
    ohne die Einzelklick-Aktion auszulösen. Auch nahe der eingestellten Doppelklickzeit testen.
 6. Rechtsklick: **New Sticky Note** und die bisherigen Menüaktionen prüfen.
    Sticky Notes vorübergehend deaktivieren: Die neue Aktion muss dann einen Hinweis zeigen.
-7. Rückweg: Tray deaktivieren, gesicherten Originalordner wiederherstellen, Obsidian neu laden.
+7. Rückweg: **Tray Extended** deaktivieren, danach das unverändert vorhandene Original **Tray** aktivieren.
+
+Die frühere Testfassung dieses Forks verwendete ebenfalls die ID `tray`. Liegt diese in einem Test-Vault
+unter `tray`, ist sie dort kein unverändertes Original. Für die neue Fassung `tray-extended` verwenden
+und die alte Testfassung deaktivieren. Im produktiven Vault ein vorhandenes Original nicht überschreiben.
+Benutzerdefinierte Obsidian-Hotkeys auf `tray:...` werden durch die neue ID nicht automatisch auf
+`tray-extended:...` übertragen. Die globalen Hotkeys in `data.json` bleiben beim Kopieren erhalten.
 
 Eine spätere Übernahme in den produktiven Vault ist ein eigener Installationsschritt.
 Die Installation erfolgt ausschließlich manuell; die Entwicklungskopie verändert keine bestehenden Vaults.
@@ -71,9 +81,11 @@ git diff --check
 
 Neun Tests prüfen die Klick-/Doppelklickfolgen mit simulierten Timern, Menüerhalt und Command-Aufruf,
 Fehlerfälle, langsame Doppelklicks, Cleanup und die Plattformabgrenzung.
-Electron, Obsidian und die Command-Ausführung werden dabei simuliert. Ein echter GUI-/Integrationstest
-mit diesem Fork in Obsidian wurde noch nicht durchgeführt; eine erfolgreich erzeugte Sticky Note ist
-deshalb noch nicht nachgewiesen. Tests sind Entwicklungsdateien und werden nicht zur Installation benötigt.
+Electron, Obsidian und die Command-Ausführung werden dabei simuliert. Der Benutzer hat am 24.10.2026
+im separaten Test-Vault die bisherige Fassung unter ID `tray` erfolgreich praktisch getestet:
+Einzelklick zeigt Obsidian, Doppelklick erzeugt genau eine Sticky Note ohne zusätzliches Hauptfenster;
+der zusätzliche Menüeintrag ist vorhanden. Die umbenannte Fassung unter ID `tray-extended` ist
+noch separat zu aktivieren und praktisch zu prüfen. Tests sind Entwicklungsdateien und werden nicht zur Installation benötigt.
 
 Quellen zur Anbindung:
 

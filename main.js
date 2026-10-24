@@ -3,11 +3,12 @@
  * (c) 2023 dragonwocky <thedragonring.bod@gmail.com> (https://dragonwocky.me/)
  * (https://github.com/dragonwocky/obsidian-tray/) under the MIT license
  * Fork: Windows tray click actions and Sticky Notes command dispatch.
+ * Tray Extended v0.3.6 (plugin ID: tray-extended).
  */
 
 "use strict";
 
-const LOG_PREFIX = "obsidian-tray",
+const LOG_PREFIX = "tray-extended",
   LOG_LOADING = "loading",
   LOG_CLEANUP = "cleaning up",
   LOG_SHOWING_WINDOWS = "showing windows",
@@ -196,11 +197,11 @@ const cancelSingleClick = () => {
         throw new Error("Obsidian command execution API is unavailable");
       }
       if (!await commands.executeCommandById(commandId)) {
-        new obsidian.Notice(`Tray: command unavailable: ${commandId}. Enable Sticky Notes and check the command ID.`);
+        new obsidian.Notice(`Tray Extended: command unavailable: ${commandId}. Enable Sticky Notes and check the command ID.`);
       }
     } catch (error) {
       console.error(`${LOG_PREFIX}: sticky note command failed`, error);
-      new obsidian.Notice("Tray: could not run the Sticky Notes command. See the developer console for details.");
+      new obsidian.Notice("Tray Extended: could not run the Sticky Notes command. See the developer console for details.");
     }
   },
   addQuickNote = () => {
